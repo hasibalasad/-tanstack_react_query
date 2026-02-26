@@ -1,11 +1,15 @@
+import { useState } from "react";
+import AddProduct from "./components/AddProduct";
 import ProductDetails from "./components/ProductDetails";
 import ProductList from "./components/ProductList";
 
 function App() {
+  const [selectedProductId, setSelectedProductId] = useState(null);
   return (
     <div className="flex m-2">
-      <ProductList />
-      <ProductDetails id={3} />
+      <AddProduct />
+      <ProductList onSelect={setSelectedProductId} />
+      {selectedProductId && <ProductDetails id={selectedProductId} />}
     </div>
   );
 }
