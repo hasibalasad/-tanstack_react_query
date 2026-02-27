@@ -1,11 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
+import { useState } from "react";
 
 export default function ProductList({ onSelect, selectedId }) {
+  const [page, setPage] = useState(1);
+
+  const queryClient = useQueryClient();
   const fetchProducts = async (object) => {
     try {
       const response = await axios.get(
-        `http://localhost:3000/${object.queryKey[0]}`,
+        `http://localhost:3000/products?_page=${object.queryKey[1]}&_per_page=12`,
       );
       return response.data;
     } catch (error) {
@@ -18,10 +22,23 @@ export default function ProductList({ onSelect, selectedId }) {
     error,
     isLoading,
   } = useQuery({
-    queryKey: ["products"],
+    queryKey: ["products", page],
     queryFn: fetchProducts,
     retry: false,
   });
+
+  const mutation = useMutation({
+    mutationFn: async (id) =>
+      await axios.delete(`http://localhost:3000/products/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+
+  function handleDelete(event, id) {
+    event.stopPropagation();
+    mutation.mutate(id);
+  }
 
   if (isLoading)
     return (
@@ -45,7 +62,7 @@ export default function ProductList({ onSelect, selectedId }) {
     );
 
   return (
-    <div className="flex flex-col flex-wrap px-6 py-8 overflow-y-auto w-4/6">
+    <div className="flex flex-col flex-wrap px-6 w-4/6">
       {/* Header */}
       <div className="mb-8">
         <p className="text-xs tracking-widest text-indigo-500 uppercase font-semibold mb-1">
@@ -58,14 +75,14 @@ export default function ProductList({ onSelect, selectedId }) {
           All Products
         </h1>
         <p className="text-slate-400 text-sm mt-1">
-          {products?.length} items available
+          {products?.data.length} items available in this page
         </p>
       </div>
 
       {/* Grid */}
       <ul className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {products &&
-          products.map((product) => {
+        {products?.data &&
+          products?.data.map((product) => {
             const isSelected = selectedId === product.id;
             return (
               <li
@@ -90,25 +107,58 @@ export default function ProductList({ onSelect, selectedId }) {
                     <div className="absolute inset-0 bg-indigo-500/10" />
                   )}
                   {isSelected && (
-                    <div className="absolute top-2 right-2 bg-indigo-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
+                    <div className="absolute top-2 right-2 bg-indigo-500 text-white text-xs px-2 rounded-full font-semibold">
                       Selected
                     </div>
                   )}
                 </div>
 
                 {/* Info */}
-                <div className="p-3 bg-white">
-                  <p className="font-semibold text-slate-800 text-sm truncate">
-                    {product.title}
-                  </p>
-                  <p className="text-indigo-600 font-bold text-sm mt-0.5">
-                    ${product.price}
-                  </p>
+                <div className="p-3 bg-white flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-slate-800 text-sm truncate">
+                      {product.title}
+                    </p>
+                    <p className="text-indigo-600 font-bold text-sm mt-0.5">
+                      ${product.price}
+                    </p>
+                  </div>
+                  <button
+                    className="text-white bg-indigo-500 px-3 py-1.5 rounded hover:bg-indigo-600 duration-300"
+                    onClick={(event) => handleDelete(event, product.id)}
+                  >
+                    Delete
+                  </button>
                 </div>
               </li>
             );
           })}
       </ul>
+
+      {/* Pagination */}
+      <div className="flex flex-col flex-1 mx-auto">
+        <div className="flex-1"></div>
+        <div className="flex justify-center h-4">
+          <button
+            className="px-4  text-sm font-semibold text-indigo-500 bg-indigo-50 rounded-full cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => setPage(page - 1)}
+            disabled={page === 1}
+          >
+            Previous
+          </button>
+
+          <button
+            className="px-4 text-sm font-semibold text-indigo-500 bg-indigo-50 rounded-full cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!products?.next}
+            onClick={() => setPage(products.next)}
+          >
+            <span className="px-4 mr-8 text-sm font-semibold text-indigo-500 bg-indigo-50 ">
+              {page}
+            </span>
+            Next
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

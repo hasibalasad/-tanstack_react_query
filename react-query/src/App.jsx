@@ -6,7 +6,7 @@ import ProductList from "./components/ProductList";
 function App() {
   const [selectedProductId, setSelectedProductId] = useState(null);
   return (
-    <div className="flex m-2">
+    <div className="flex">
       <AddProduct />
       <ProductList onSelect={setSelectedProductId} />
       {selectedProductId && <ProductDetails id={selectedProductId} />}
